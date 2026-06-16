@@ -1,22 +1,41 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Data Template Hub API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: templates
+    description: Template operations
+  - name: categories
+    description: Category operations
+  - name: auth
+    description: Authentication operations
+  - name: users
+    description: User operations
+  - name: favorites
+    description: Favorites operations
+  - name: ratings
+    description: Rating operations
+  - name: analytics
+    description: Analytics operations
+  - name: admin
+    description: Admin operations
+  - name: submissions
+    description: Template submission operations
+  - name: comments
+    description: Comment operations
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +43,595 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login with email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResult"
+        "401":
+          description: Invalid credentials
+
+  /auth/register:
+    post:
+      operationId: register
+      tags: [auth]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterInput"
+      responses:
+        "201":
+          description: Registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResult"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout current user
+      responses:
+        "200":
+          description: Logged out
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current authenticated user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Not authenticated
+
+  /categories:
+    get:
+      operationId: listCategories
+      tags: [categories]
+      summary: List all template categories
+      responses:
+        "200":
+          description: List of categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Category"
+
+  /templates:
+    get:
+      operationId: listTemplates
+      tags: [templates]
+      summary: List templates with optional filters
+      parameters:
+        - name: categoryId
+          in: query
+          schema:
+            type: ["integer", "null"]
+        - name: search
+          in: query
+          schema:
+            type: ["string", "null"]
+        - name: tags
+          in: query
+          schema:
+            type: ["string", "null"]
+        - name: sortBy
+          in: query
+          schema:
+            type: ["string", "null"]
+        - name: page
+          in: query
+          schema:
+            type: ["integer", "null"]
+        - name: limit
+          in: query
+          schema:
+            type: ["integer", "null"]
+      responses:
+        "200":
+          description: Paginated template list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TemplateListResult"
+
+    post:
+      operationId: createTemplate
+      tags: [templates]
+      summary: Create a new template (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TemplateInput"
+      responses:
+        "201":
+          description: Template created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Template"
+
+  /templates/featured:
+    get:
+      operationId: listFeaturedTemplates
+      tags: [templates]
+      summary: Get featured templates for homepage
+      responses:
+        "200":
+          description: Featured templates
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Template"
+
+  /templates/popular:
+    get:
+      operationId: listPopularTemplates
+      tags: [templates]
+      summary: Get most popular templates
+      responses:
+        "200":
+          description: Popular templates
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Template"
+
+  /templates/recent:
+    get:
+      operationId: listRecentTemplates
+      tags: [templates]
+      summary: Get recently added templates
+      responses:
+        "200":
+          description: Recent templates
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Template"
+
+  /templates/{id}:
+    get:
+      operationId: getTemplate
+      tags: [templates]
+      summary: Get a single template by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Template detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TemplateDetail"
+        "404":
+          description: Not found
+
+    patch:
+      operationId: updateTemplate
+      tags: [templates]
+      summary: Update a template (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TemplateUpdate"
+      responses:
+        "200":
+          description: Updated template
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Template"
+
+    delete:
+      operationId: deleteTemplate
+      tags: [templates]
+      summary: Delete a template (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /templates/{id}/versions:
+    get:
+      operationId: listTemplateVersions
+      tags: [templates]
+      summary: Get all versions of a template
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Template versions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TemplateVersion"
+
+  /templates/{id}/download:
+    post:
+      operationId: downloadTemplate
+      tags: [templates]
+      summary: Record a template download
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Download recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TemplateContent"
+
+  /templates/{id}/comments:
+    get:
+      operationId: listTemplateComments
+      tags: [comments]
+      summary: Get comments for a template
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Comments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Comment"
+
+    post:
+      operationId: createComment
+      tags: [comments]
+      summary: Post a comment on a template
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CommentInput"
+      responses:
+        "201":
+          description: Comment created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Comment"
+
+  /favorites:
+    get:
+      operationId: listFavorites
+      tags: [favorites]
+      summary: Get current user's favorited templates
+      responses:
+        "200":
+          description: Favorites
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Template"
+
+  /favorites/{templateId}:
+    post:
+      operationId: addFavorite
+      tags: [favorites]
+      summary: Add template to favorites
+      parameters:
+        - name: templateId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Added to favorites
+
+    delete:
+      operationId: removeFavorite
+      tags: [favorites]
+      summary: Remove template from favorites
+      parameters:
+        - name: templateId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Removed from favorites
+
+  /ratings/{templateId}:
+    post:
+      operationId: rateTemplate
+      tags: [ratings]
+      summary: Rate a template (1-5)
+      parameters:
+        - name: templateId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RatingInput"
+      responses:
+        "200":
+          description: Rating saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RatingResult"
+
+  /submissions:
+    get:
+      operationId: listSubmissions
+      tags: [submissions]
+      summary: List template submissions (admin view)
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: ["string", "null"]
+      responses:
+        "200":
+          description: Submissions list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Submission"
+
+    post:
+      operationId: submitTemplate
+      tags: [submissions]
+      summary: Submit a template for review
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubmissionInput"
+      responses:
+        "201":
+          description: Submission created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Submission"
+
+  /submissions/{id}/approve:
+    post:
+      operationId: approveSubmission
+      tags: [submissions]
+      summary: Approve a template submission (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Submission approved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Submission"
+
+  /submissions/{id}/reject:
+    post:
+      operationId: rejectSubmission
+      tags: [submissions]
+      summary: Reject a template submission (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RejectionInput"
+      responses:
+        "200":
+          description: Submission rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Submission"
+
+  /analytics/summary:
+    get:
+      operationId: getAnalyticsSummary
+      tags: [analytics]
+      summary: Get overall platform analytics summary
+      responses:
+        "200":
+          description: Analytics summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalyticsSummary"
+
+  /analytics/category-breakdown:
+    get:
+      operationId: getCategoryBreakdown
+      tags: [analytics]
+      summary: Get template count and downloads by category
+      responses:
+        "200":
+          description: Category breakdown
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CategoryStat"
+
+  /analytics/top-contributors:
+    get:
+      operationId: getTopContributors
+      tags: [analytics]
+      summary: Get top template contributors
+      responses:
+        "200":
+          description: Top contributors
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ContributorStat"
+
+  /analytics/download-trends:
+    get:
+      operationId: getDownloadTrends
+      tags: [analytics]
+      summary: Get download counts over time (last 30 days)
+      responses:
+        "200":
+          description: Download trends
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TrendPoint"
+
+  /admin/users:
+    get:
+      operationId: listUsers
+      tags: [admin]
+      summary: List all users (admin)
+      responses:
+        "200":
+          description: Users list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+
+  /admin/users/{id}/role:
+    patch:
+      operationId: updateUserRole
+      tags: [admin]
+      summary: Update user role (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RoleUpdate"
+      responses:
+        "200":
+          description: Role updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /tags:
+    get:
+      operationId: listTags
+      tags: [templates]
+      summary: Get all tags used across templates
+      responses:
+        "200":
+          description: Tag list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Tag"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +642,458 @@ components:
       required:
         - status
 
+    LoginInput:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+
+    RegisterInput:
+      type: object
+      required: [email, password, name]
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+        name:
+          type: string
+
+    AuthResult:
+      type: object
+      required: [user, token]
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        token:
+          type: string
+
+    User:
+      type: object
+      required: [id, email, name, role, createdAt]
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+        name:
+          type: string
+        role:
+          type: string
+        avatarUrl:
+          type: ["string", "null"]
+        bio:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    Category:
+      type: object
+      required: [id, name, slug, icon, description, templateCount]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        slug:
+          type: string
+        icon:
+          type: string
+        description:
+          type: string
+        color:
+          type: ["string", "null"]
+        templateCount:
+          type: integer
+
+    Tag:
+      type: object
+      required: [id, name, count]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        count:
+          type: integer
+
+    Template:
+      type: object
+      required: [id, title, description, categoryId, categoryName, authorId, authorName, version, status, downloads, averageRating, ratingCount, isFavorited, tags, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        categoryId:
+          type: integer
+        categoryName:
+          type: string
+        categorySlug:
+          type: string
+        authorId:
+          type: integer
+        authorName:
+          type: string
+        authorAvatarUrl:
+          type: ["string", "null"]
+        version:
+          type: string
+        status:
+          type: string
+        downloads:
+          type: integer
+        averageRating:
+          type: number
+        ratingCount:
+          type: integer
+        isFavorited:
+          type: boolean
+        tags:
+          type: array
+          items:
+            type: string
+        language:
+          type: ["string", "null"]
+        complexity:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    TemplateDetail:
+      type: object
+      required: [id, title, description, categoryId, categoryName, authorId, authorName, version, status, downloads, averageRating, ratingCount, isFavorited, tags, code, documentation, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        categoryId:
+          type: integer
+        categoryName:
+          type: string
+        categorySlug:
+          type: string
+        authorId:
+          type: integer
+        authorName:
+          type: string
+        authorAvatarUrl:
+          type: ["string", "null"]
+        version:
+          type: string
+        status:
+          type: string
+        downloads:
+          type: integer
+        averageRating:
+          type: number
+        ratingCount:
+          type: integer
+        isFavorited:
+          type: boolean
+        tags:
+          type: array
+          items:
+            type: string
+        language:
+          type: ["string", "null"]
+        complexity:
+          type: ["string", "null"]
+        code:
+          type: string
+        documentation:
+          type: string
+        usageExample:
+          type: ["string", "null"]
+        prerequisites:
+          type: ["string", "null"]
+        changelog:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    TemplateContent:
+      type: object
+      required: [code, filename]
+      properties:
+        code:
+          type: string
+        filename:
+          type: string
+
+    TemplateListResult:
+      type: object
+      required: [templates, total, page, limit]
+      properties:
+        templates:
+          type: array
+          items:
+            $ref: "#/components/schemas/Template"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+
+    TemplateInput:
+      type: object
+      required: [title, description, categoryId, code, tags, version]
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        categoryId:
+          type: integer
+        code:
+          type: string
+        documentation:
+          type: string
+        usageExample:
+          type: string
+        prerequisites:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        version:
+          type: string
+        language:
+          type: string
+        complexity:
+          type: string
+
+    TemplateUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        categoryId:
+          type: integer
+        code:
+          type: string
+        documentation:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        version:
+          type: string
+        status:
+          type: string
+        language:
+          type: string
+        complexity:
+          type: string
+
+    TemplateVersion:
+      type: object
+      required: [id, templateId, version, changelog, createdAt, authorName]
+      properties:
+        id:
+          type: integer
+        templateId:
+          type: integer
+        version:
+          type: string
+        changelog:
+          type: string
+        code:
+          type: string
+        createdAt:
+          type: string
+        authorName:
+          type: string
+
+    Comment:
+      type: object
+      required: [id, templateId, authorId, authorName, content, createdAt]
+      properties:
+        id:
+          type: integer
+        templateId:
+          type: integer
+        authorId:
+          type: integer
+        authorName:
+          type: string
+        authorAvatarUrl:
+          type: ["string", "null"]
+        content:
+          type: string
+        createdAt:
+          type: string
+
+    CommentInput:
+      type: object
+      required: [content]
+      properties:
+        content:
+          type: string
+
+    RatingInput:
+      type: object
+      required: [score]
+      properties:
+        score:
+          type: integer
+
+    RatingResult:
+      type: object
+      required: [averageRating, ratingCount, userScore]
+      properties:
+        averageRating:
+          type: number
+        ratingCount:
+          type: integer
+        userScore:
+          type: integer
+
+    Submission:
+      type: object
+      required: [id, title, description, categoryId, status, submittedById, submittedByName, createdAt]
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        categoryId:
+          type: integer
+        categoryName:
+          type: string
+        code:
+          type: string
+        documentation:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+        submittedById:
+          type: integer
+        submittedByName:
+          type: string
+        reviewedById:
+          type: ["integer", "null"]
+        reviewedByName:
+          type: ["string", "null"]
+        reviewNotes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    SubmissionInput:
+      type: object
+      required: [title, description, categoryId, code, tags]
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        categoryId:
+          type: integer
+        code:
+          type: string
+        documentation:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        language:
+          type: string
+        complexity:
+          type: string
+
+    RejectionInput:
+      type: object
+      required: [reason]
+      properties:
+        reason:
+          type: string
+
+    AnalyticsSummary:
+      type: object
+      required: [totalTemplates, totalDownloads, totalUsers, totalCategories, pendingSubmissions, totalRatings]
+      properties:
+        totalTemplates:
+          type: integer
+        totalDownloads:
+          type: integer
+        totalUsers:
+          type: integer
+        totalCategories:
+          type: integer
+        pendingSubmissions:
+          type: integer
+        totalRatings:
+          type: integer
+
+    CategoryStat:
+      type: object
+      required: [categoryId, categoryName, categorySlug, templateCount, downloads]
+      properties:
+        categoryId:
+          type: integer
+        categoryName:
+          type: string
+        categorySlug:
+          type: string
+        templateCount:
+          type: integer
+        downloads:
+          type: integer
+
+    ContributorStat:
+      type: object
+      required: [userId, name, templateCount, totalDownloads]
+      properties:
+        userId:
+          type: integer
+        name:
+          type: string
+        avatarUrl:
+          type: ["string", "null"]
+        templateCount:
+          type: integer
+        totalDownloads:
+          type: integer
+
+    TrendPoint:
+      type: object
+      required: [date, downloads]
+      properties:
+        date:
+          type: string
+        downloads:
+          type: integer
+
+    RoleUpdate:
+      type: object
+      required: [role]
+      properties:
+        role:
+          type: string
